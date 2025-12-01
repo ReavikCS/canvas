@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editor Visual Canvas</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="toolbar">
+        <button id="addNodeBtn">Adicionar Objeto</button>
+        <button id="addCanvasBtn">Adicionar Canvas</button>
+        <button id="clearCanvasBtn">Limpar Canvas</button>
+        <button id="saveBtn">Salvar Tudo</button>
+        <button id="loadBtn">Carregar</button>
+        <select id="canvasSelector"></select>
+    </div>
+    
+    <div class="container">
+        <canvas id="canvas"></canvas>
+    </div>
+    
+    <div id="nodeModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Configurar Objeto</h2>
+            <form id="nodeForm">
+                <label for="nodeName">Nome:</label>
+                <input type="text" id="nodeName" required>
+                
+                <label for="nodeTitle">Título:</label>
+                <input type="text" id="nodeTitle" required>
+                
+                <label for="nodeDescription">Descrição:</label>
+                <textarea id="nodeDescription" rows="4"></textarea>
+                
+                <button type="submit">Criar Objeto</button>
+            </form>
+        </div>
+    </div>
+    
+    <div id="canvasModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Novo Canvas</h2>
+            <form id="canvasForm">
+                <label for="canvasName">Nome do Canvas:</label>
+                <input type="text" id="canvasName" required>
+                
+                <button type="submit">Criar Canvas</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
