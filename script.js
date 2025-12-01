@@ -201,6 +201,7 @@ class MultiCanvasEditor {
         // Propriedades de sincronização
         this.sessionId = 'sessao-padrao';
         this.syncEnabled = false;
+        this.lastSyncTimestamp = 0;
         
         // Criar canvas padrão
         this.createCanvas('Principal');
@@ -212,6 +213,13 @@ class MultiCanvasEditor {
         
         // Carregar dados salvos automaticamente
         this.loadFromLocalStorage();
+        
+        // Verificar mudanças no localStorage periodicamente
+        setInterval(() => {
+            if (this.syncEnabled) {
+                this.checkForExternalChanges();
+            }
+        }, 1000);
         
         this.setupEventListeners();
         this.animate();
@@ -345,6 +353,13 @@ class MultiCanvasEditor {
             this.handleMouseLeave();
         });
         
+        // Storage event listener para detecção de mudanças externas
+        window.addEventListener('storage', (e) => {
+            if (e.key === `sync_${this.sessionId}` && this.syncEnabled) {
+                this.loadSyncData();
+            }
+        });
+        
         // Salvar automaticamente antes de fechar a página
         window.addEventListener('beforeunload', () => {
             this.saveToLocalStorage();
@@ -358,31 +373,17 @@ class MultiCanvasEditor {
         if (this.syncEnabled) {
             syncBtn.textContent = 'Parar Sincronização';
             syncBtn.style.backgroundColor = '#ff9800';
-            this.startSync();
+            this.lastSyncTimestamp = Date.now();
+            this.saveSyncData();
         } else {
             syncBtn.textContent = 'Sincronizar';
             syncBtn.style.backgroundColor = '#4CAF50';
         }
     }
     
-    startSync() {
+    saveSyncData() {
         if (!this.syncEnabled) return;
         
-        // Enviar dados atuais
-        this.sendSyncData();
-        
-        // Verificar por atualizações a cada 5 segundos
-        setTimeout(() => {
-            if (this.syncEnabled) {
-                this.checkForUpdates();
-                this.startSync();
-            }
-        }, 5000);
-    }
-    
-    sendSyncData() {
-        // Em uma implementação real, aqui enviaria os dados para um servidor
-        // Por enquanto, vamos simular usando sessionStorage compartilhado
         try {
             const data = {
                 canvases: {},
@@ -410,94 +411,89 @@ class MultiCanvasEditor {
                 };
             });
             
-            // Salvar no sessionStorage com chave baseada no sessionId
-            sessionStorage.setItem(`sync_${this.sessionId}`, JSON.stringify(data));
-            console.log('Dados sincronizados para sessão:', this.sessionId);
+            // Salvar no localStorage com chave baseada no sessionId
+            localStorage.setItem(`sync_${this.sessionId}`, JSON.stringify(data));
+            this.lastSyncTimestamp = data.timestamp;
         } catch (error) {
-            console.error('Erro ao sincronizar dados:', error);
+            console.error('Erro ao salvar dados de sincronização:', error);
         }
     }
     
-    checkForUpdates() {
+    checkForExternalChanges() {
         try {
-            // Verificar se há dados mais recentes
-            const syncData = sessionStorage.getItem(`sync_${this.sessionId}`);
+            const syncData = localStorage.getItem(`sync_${this.sessionId}`);
             if (syncData) {
                 const data = JSON.parse(syncData);
-                const localData = sessionStorage.getItem(`local_${this.sessionId}`);
-                
-                if (localData) {
-                    const local = JSON.parse(localData);
-                    // Se os dados remotos são mais recentes, atualizar
-                    if (data.timestamp > local.timestamp) {
-                        this.loadSyncData(data);
-                        console.log('Dados atualizados da sessão:', this.sessionId);
-                    }
-                } else {
-                    // Primeira vez, carregar os dados
-                    this.loadSyncData(data);
+                // Se houver dados mais recentes, carregar
+                if (data.timestamp > this.lastSyncTimestamp) {
+                    this.loadSyncData();
                 }
             }
-            
-            // Salvar timestamp local
-            sessionStorage.setItem(`local_${this.sessionId}`, JSON.stringify({
-                timestamp: Date.now()
-            }));
         } catch (error) {
-            console.error('Erro ao verificar atualizações:', error);
+            console.error('Erro ao verificar mudanças externas:', error);
         }
     }
     
-    loadSyncData(data) {
-        // Limpar canvases atuais
-        this.canvases = {};
-        
-        // Criar canvases
-        Object.keys(data.canvases).forEach(name => {
-            const canvasData = data.canvases[name];
-            this.canvases[name] = new Canvas(name);
-            const canvas = this.canvases[name];
+    loadSyncData() {
+        try {
+            const syncData = localStorage.getItem(`sync_${this.sessionId}`);
+            if (!syncData) return;
             
-            // Restaurar propriedades
-            canvas.nextNodeId = canvasData.nextNodeId || 1;
+            const data = JSON.parse(syncData);
             
-            // Criar nós
-            const nodeMap = {};
-            if (canvasData.nodes) {
-                canvasData.nodes.forEach(nodeData => {
-                    const node = canvas.addNode(
-                        nodeData.x, 
-                        nodeData.y, 
-                        nodeData.name, 
-                        nodeData.title, 
-                        nodeData.description
-                    );
-                    node.id = nodeData.id;
-                    nodeMap[node.id] = node;
-                });
+            // Limpar canvases atuais
+            this.canvases = {};
+            
+            // Criar canvases
+            Object.keys(data.canvases).forEach(name => {
+                const canvasData = data.canvases[name];
+                this.canvases[name] = new Canvas(name);
+                const canvas = this.canvases[name];
+                
+                // Restaurar propriedades
+                canvas.nextNodeId = canvasData.nextNodeId || 1;
+                
+                // Criar nós
+                const nodeMap = {};
+                if (canvasData.nodes) {
+                    canvasData.nodes.forEach(nodeData => {
+                        const node = canvas.addNode(
+                            nodeData.x, 
+                            nodeData.y, 
+                            nodeData.name, 
+                            nodeData.title, 
+                            nodeData.description
+                        );
+                        node.id = nodeData.id;
+                        nodeMap[node.id] = node;
+                    });
+                }
+                
+                // Criar conexões
+                if (canvasData.connections) {
+                    canvasData.connections.forEach(connData => {
+                        const startNode = nodeMap[connData.startNodeId];
+                        const endNode = nodeMap[connData.endNodeId];
+                        
+                        if (startNode && endNode) {
+                            canvas.connections.push(new Connection(startNode, endNode));
+                        }
+                    });
+                }
+            });
+            
+            // Definir canvas atual
+            if (data.currentCanvasName && this.canvases[data.currentCanvasName]) {
+                this.currentCanvasName = data.currentCanvasName;
+            } else if (Object.keys(this.canvases).length > 0) {
+                this.currentCanvasName = Object.keys(this.canvases)[0];
             }
             
-            // Criar conexões
-            if (canvasData.connections) {
-                canvasData.connections.forEach(connData => {
-                    const startNode = nodeMap[connData.startNodeId];
-                    const endNode = nodeMap[connData.endNodeId];
-                    
-                    if (startNode && endNode) {
-                        canvas.connections.push(new Connection(startNode, endNode));
-                    }
-                });
-            }
-        });
-        
-        // Definir canvas atual
-        if (data.currentCanvasName && this.canvases[data.currentCanvasName]) {
-            this.currentCanvasName = data.currentCanvasName;
-        } else if (Object.keys(this.canvases).length > 0) {
-            this.currentCanvasName = Object.keys(this.canvases)[0];
+            this.updateCanvasSelector();
+            this.lastSyncTimestamp = data.timestamp;
+        } catch (error) {
+            console.error('Erro ao carregar dados de sincronização:', error);
         }
-        
-        this.updateCanvasSelector();
     }
     
     openNodeModal() {
@@ -538,7 +534,7 @@ class MultiCanvasEditor {
             
             // Sincronizar se habilitado
             if (this.syncEnabled) {
-                this.sendSyncData();
+                this.saveSyncData();
             }
         }
     }
@@ -552,7 +548,7 @@ class MultiCanvasEditor {
                 
                 // Sincronizar se habilitado
                 if (this.syncEnabled) {
-                    this.sendSyncData();
+                    this.saveSyncData();
                 }
             } else {
                 alert('Já existe um canvas com esse nome!');
@@ -569,7 +565,7 @@ class MultiCanvasEditor {
             
             // Sincronizar se habilitado
             if (this.syncEnabled) {
-                this.sendSyncData();
+                this.saveSyncData();
             }
         }
     }
@@ -602,9 +598,9 @@ class MultiCanvasEditor {
         
         localStorage.setItem('multiCanvasEditorData', JSON.stringify(data));
         
-        // Também salvar para sincronização
+        // Também salvar para sincronização se habilitado
         if (this.syncEnabled) {
-            this.sendSyncData();
+            this.saveSyncData();
         }
     }
     
@@ -787,7 +783,7 @@ class MultiCanvasEditor {
             
             // Sincronizar se habilitado
             if (this.syncEnabled) {
-                this.sendSyncData();
+                this.saveSyncData();
             }
         }
         
@@ -805,7 +801,7 @@ class MultiCanvasEditor {
                     
                     // Sincronizar se habilitado
                     if (this.syncEnabled) {
-                        this.sendSyncData();
+                        this.saveSyncData();
                     }
                     break;
                 }
