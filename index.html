@@ -3,19 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Editor Visual Canvas</title>
+    <title>VisualFlow - Editor de Diagramas</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="toolbar">
-        <button id="addNodeBtn">Adicionar Objeto</button>
         <button id="addCanvasBtn">Adicionar Canvas</button>
-        <button id="clearCanvasBtn">Limpar Canvas</button>
-        <button id="saveBtn">Salvar Tudo</button>
-        <button id="syncBtn">Sincronizar</button>
-        <button id="loadBtn">Carregar</button>
+        <button id="saveFileBtn">Salvar Arquivo</button>
+        <button id="loadFileBtn">Carregar Arquivo</button>
+        <input type="text" id="searchInput" placeholder="Pesquisar nós... (Ctrl+F)" style="padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); background: rgba(40,40,60,0.8); color: white;">
         <select id="canvasSelector"></select>
-        <input type="text" id="sessionId" placeholder="ID da Sessão" value="sessao-padrao">
     </div>
     
     <div class="container">
@@ -25,7 +22,7 @@
     <div id="nodeModal" class="modal">
         <div class="modal-content">
             <span class="close">&times;</span>
-            <h2>Configurar Objeto</h2>
+            <h2>Adicionar Novo Objeto</h2>
             <form id="nodeForm">
                 <label for="nodeName">Nome:</label>
                 <input type="text" id="nodeName" required>
@@ -36,7 +33,7 @@
                 <label for="nodeDescription">Descrição:</label>
                 <textarea id="nodeDescription" rows="4"></textarea>
                 
-                <button type="submit">Criar Objeto</button>
+                <button type="submit">Adicionar Objeto</button>
             </form>
         </div>
     </div>
@@ -44,16 +41,34 @@
     <div id="canvasModal" class="modal">
         <div class="modal-content">
             <span class="close">&times;</span>
-            <h2>Novo Canvas</h2>
+            <h2>Adicionar Novo Canvas</h2>
             <form id="canvasForm">
                 <label for="canvasName">Nome do Canvas:</label>
                 <input type="text" id="canvasName" required>
-                
-                <button type="submit">Criar Canvas</button>
+                <button type="submit">Adicionar Canvas</button>
             </form>
         </div>
     </div>
-
+    
     <script src="script.js"></script>
+    
+    <!-- Input file oculto para carregar arquivos -->
+    <input type="file" id="fileInput" accept=".json" style="display: none;">
+    
+    <!-- Tutorial em estilo gaveta -->
+    <div id="tutorialDrawer" class="tutorial-drawer">
+        <div class="tutorial-tab" id="tutorialTab">
+            <span class="tab-text">?</span>
+        </div>
+        <div class="tutorial-content">
+            <div class="tutorial-header">
+                <h2>Tutorial do VisualFlow</h2>
+                <button id="closeTutorial" class="close-tutorial">×</button>
+            </div>
+            <div class="tutorial-body" id="tutorialBody">
+                <!-- Conteúdo do tutorial será adicionado aqui -->
+            </div>
+        </div>
+    </div>
 </body>
 </html>
